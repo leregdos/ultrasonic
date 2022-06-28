@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_audio_recorder2/flutter_audio_recorder2.dart';
+import 'package:flutter_audio_recorder2/flutter_audio_recorder2.dart';
 
 void main() {
   runApp(const MyApp());
@@ -31,13 +31,54 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  FlutterAudioRecorder2 recorder =
+      FlutterAudioRecorder2("recording1", audioFormat: AudioFormat.WAV);
   bool _recording = false;
-  // bool hasPermission = await FlutterAudioRecorder2.hasPermissions;
 
-  void _recordStop() {
-    setState(() {
-      _recording = !_recording;
-    });
+  Future<bool> hasPermission() async {
+    bool? hasPermission = await FlutterAudioRecorder2.hasPermissions;
+    return hasPermission!;
+  }
+
+  record() async {
+    var recording = await recorder.current(channel: 0);
+    if (_recording) {
+      if (recording != null) {
+        if (recording.status == RecordingStatus.Paused) {
+          await recorder.resume();
+        } else {
+          await recorder.start();
+        }
+        print(recording.status);
+      }
+    } else {
+      await recorder.pause();
+      if (recording != null) {
+        print(recording.status);
+      }
+    }
+  }
+
+  void _recordStop() async {
+    bool perm = await hasPermission();
+    if (perm) {
+      setState(() {
+        _recording = !_recording;
+      });
+      record();
+    }
+  }
+
+  void _save() async {
+    bool perm = await hasPermission();
+    if (perm) {
+      if (_recording) {
+        setState(() {
+          _recording = false;
+        });
+        recorder.stop();
+      }
+    }
   }
 
   @override
@@ -62,6 +103,19 @@ class _MyHomePageState extends State<MyHomePage> {
               tooltip: 'Record',
               child:
                   _recording ? Icon(Icons.stop) : Icon(Icons.record_voice_over),
+            ),
+            const SizedBox(
+              height: 30,
+            ),
+            Card(
+              color: Colors.grey,
+              elevation: 20,
+              borderOnForeground: true,
+              child: MaterialButton(
+                onPressed: _save,
+                child: Text('Save Recording',
+                    style: Theme.of(context).textTheme.headline6),
+              ),
             ),
           ],
         ),
